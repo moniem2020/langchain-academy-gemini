@@ -14,9 +14,14 @@ def multiply(a: int, b: int) -> int:
     return a * b
 
 # LLM with bound tool
-llm = ChatOpenAI(model="gpt-4o")
-llm_with_tools = llm.bind_tools([multiply])
+# NEW (Gemini)
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
 
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash", 
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 # Node
 def tool_calling_llm(state: MessagesState):
     return {"messages": [llm_with_tools.invoke(state["messages"])]}
