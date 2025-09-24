@@ -1,9 +1,8 @@
-from langchain_openai import ChatOpenAI
-from langgraph.graph import MessagesState
-from langgraph.graph import StateGraph, START, END
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 
-# Tool
+
 def multiply(a: int, b: int) -> int:
     """Multiplies a and b.
 
@@ -13,31 +12,24 @@ def multiply(a: int, b: int) -> int:
     """
     return a * b
 
-# LLM with bound tool
-# NEW (Gemini)
-from langchain_google_genai import ChatGoogleGenerativeAI
-import os
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash", 
-    api_key=os.getenv("GEMINI_API_KEY")
-)
-# Node
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+llm_with_tools = llm.bind_tools([multiply])
+
+
 def tool_calling_llm(state: MessagesState):
     return {"messages": [llm_with_tools.invoke(state["messages"])]}
 
-# Build graph
+
 builder = StateGraph(MessagesState)
 builder.add_node("tool_calling_llm", tool_calling_llm)
 builder.add_node("tools", ToolNode([multiply]))
 builder.add_edge(START, "tool_calling_llm")
 builder.add_conditional_edges(
     "tool_calling_llm",
-    # If the latest message (result) from assistant is a tool call -> tools_condition routes to tools
-    # If the latest message (result) from assistant is a not a tool call -> tools_condition routes to END
     tools_condition,
 )
 builder.add_edge("tools", END)
 
-# Compile graph
+
 graph = builder.compile()
